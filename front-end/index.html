@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>To Do List full-stack App</title>
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gloria+Hallelujah&family=Handjet:wght@100..900&display=swap" rel="stylesheet">
+    <style>
+
+      *,
+      *::before,
+      *::after {
+        font-family: "Gloria Hallelujah", cursive;
+      }
+
+      body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background-color: hsl(200, 60%, 70%);
+        margin: 0;
+        padding-inline: 0;
+        padding-block: 2em;
+      }
+
+      .toDo-wrapper {
+        display: flex;
+        flex-direction: column;
+        width: 500px;
+        background-color: hsl(0, 0%, 85%);
+        padding-block: 1em;
+        gap: 0.5em;
+        border-radius: 1em;
+        border: solid hsl(200, 60%, 30%);
+        border-width: 5px 0 0 0;
+        box-shadow: 0px 0px 30px 1px white;
+      }
+
+      .toDo-wrapper .addTask-cont {
+        display: flex;
+        flex-direction: column;
+        gap: 1em;
+        padding-inline: 1em;
+      }
+
+      .toDo-wrapper .addTask-cont .addLabel {
+      }
+
+      .toDo-wrapper .addTask-cont .addLabel h2 {
+        color: hsl(200, 60%, 30%);
+      }
+
+      .toDo-wrapper .addTask-cont .addInput {
+        padding-inline: 1em;
+        padding-block: 0.5em;
+        border-radius: 0.5em;
+        border: solid 2px hsl(200, 60%, 30%);
+      }
+
+      .toDo-wrapper .addTask-cont .add-btn {
+        padding-inline: 1em;
+        padding-block: 0.5em;
+        border-radius: 0.5em;
+        font-weight: bold;
+        background-color: hsl(200, 60%, 30%);
+        border: none;
+        color: white;
+        filter: drop-shadow(0 0 10px hsl(200, 60%, 30%));
+        cursor: pointer;
+        transition: opacity 0.15s ease;
+      }
+
+      .toDo-wrapper .addTask-cont .add-btn:hover {
+        opacity: 0.8;
+      }
+
+      .toDo-wrapper .task-list  {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .toDo-wrapper .task-list .task  {
+        display: flex;
+        justify-content: space-between;
+        padding-inline: 0;
+        padding-block: 0.5em;
+        padding-inline: 1em;
+        color: hsl(0, 0%, 15%);
+        font-weight: 600;
+      }
+
+      .toDo-wrapper .task-list .task:nth-child(2n)  {
+        background-color: hsl(0, 0%, 100%);
+      }
+
+      .toDo-wrapper .task-list .task .delete-btn  {
+        border-radius: 1em;
+        background-color: hsl(0, 80%, 70%);
+        border: solid 1px;
+        filter: drop-shadow(3px 3px 1px hsla(0, 0%, 0%, 0.5));
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 0.15s ease;
+      }
+
+      .toDo-wrapper .task-list .task .delete-btn:hover  {
+        opacity: 0.8;
+      }
+
+    </style>
+  </head>
+  <body>
+    <div class="toDo-wrapper">
+
+      <div class="addTask-cont">
+        <label class="addLabel" for="add"><h2>Add a Task</h2></label>
+        <input class="addInput addInput-js" id="add" type="text" placeholder="What's on your mind?" />
+        <button class="add-btn add-btn-js">ADD</button>
+      </div>
+
+      <ul class="task-list task-list-js">
+      </ul>
+
+    </div>
+
+    <script>
+
+      const fetchTasks = async () => {
+        try {
+          const response = await fetch('http://localhost:4000/tasks');
+          if (!response.ok) throw new Error('There\'s a problem connecting with the server');
+
+          const tasks = await response.json();
+          console.log('fetch successful: ', tasks);
+          updateTaskDOM(tasks);
+        } catch (err) {
+          console.error('Error: couldn\'t fetch Tasks: ', err);
+          tasks = [];
+        }
+      }
+
+      const addTask = async () => {
+        try {
+          const response = await fetch('http://localhost:4000/tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ inputVal })
+          });
+          if(!response.ok) throw new Error('couldn\'t add the new task to the tasks');
+          inputElement.value = '';
+
+          const tasks = await response.json();
+          console.log('fetch successful: ', tasks);
+          updateTaskDOM(tasks);
+        } catch (err) {
+          console.error('Error: ', err)
+        }
+
+      }
+
+      let inputVal = '';
+      const saveVal = e => inputVal = e.target.value;
+
+      const updateTaskDOM = (tasks) => { 
+
+        const addDeleteElementsListeners = () => {
+          const deleteBtnElements = document.querySelectorAll('.delete-btn-js');
+          deleteBtnElements.forEach(el => el.addEventListener('click', deleteTask));
+        }
+        
+        let html = '';
+        tasks.forEach((item, i) => {
+          html += 
+          `
+            <li class="task task-js data-index=${i}">
+              <span>${item}</span>
+              <button class="delete-btn delete-btn-js" data-index=${i}>X</button>
+            </li>
+          `;
+        })
+
+        tasksListElement.innerHTML = html
+        addDeleteElementsListeners();
+      };
+
+      const deleteTask = async e => {
+        try {
+          const { index } = e.target.dataset;
+          const response = await fetch(`http://localhost:4000/tasks/${index}`, {
+            method: 'DELETE'
+          })
+          if (!response.ok) throw new Error('an error happened while connecting to the server');
+
+          const tasks = await response.json();
+          updateTaskDOM(tasks);
+        } catch(err) {
+          console.error('Error: unable to delete task: ', err);
+        }
+      };
+
+      const inputElement = document.querySelector('.addInput-js');
+      inputElement.addEventListener('change', saveVal);
+
+      const addBtnElement = document.querySelector('.add-btn-js');
+      addBtnElement.addEventListener('click', addTask);
+
+      const tasksListElement = document.querySelector('.task-list-js');
+
+
+      // console.log({inputElement, tasks});
+      fetchTasks();
+    </script>
+  </body>
+</html>
