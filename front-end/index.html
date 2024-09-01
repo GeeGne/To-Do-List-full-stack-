@@ -160,7 +160,6 @@
         } catch (err) {
           console.error('Error: ', err)
         }
-
       }
 
       let inputVal = '';
@@ -177,9 +176,9 @@
         tasks.forEach((item, i) => {
           html += 
           `
-            <li class="task task-js data-index=${i}">
+            <li class="task task-js" data-index="${i}" data-task="${item}">
               <span>${item}</span>
-              <button class="delete-btn delete-btn-js" data-index=${i}>X</button>
+              <button class="delete-btn delete-btn-js" data-index="${i}" data-task="${item}">X</button>
             </li>
           `;
         })
@@ -190,16 +189,16 @@
 
       const deleteTask = async e => {
         try {
-          const { index } = e.target.dataset;
-          const response = await fetch(`http://localhost:4000/tasks/${index}`, {
+          const { index, task } = e.target.dataset;
+          const response = await fetch(`http://localhost:4000/tasks/${task}`, {
             method: 'DELETE'
           })
-          if (!response.ok) throw new Error('an error happened while connecting to the server');
+          if (!response.ok) throw new Error('an error happened while deleting a task: ' + response.statusText);
 
           const tasks = await response.json();
           updateTaskDOM(tasks);
         } catch(err) {
-          console.error('Error: unable to delete task: ', err);
+          console.error('Error: unable to delete task: ', err.message);
         }
       };
 
@@ -211,8 +210,6 @@
 
       const tasksListElement = document.querySelector('.task-list-js');
 
-
-      // console.log({inputElement, tasks});
       fetchTasks();
     </script>
   </body>

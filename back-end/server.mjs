@@ -1,39 +1,66 @@
 import express from 'express';
 import cors from 'cors';
-import bodyParser from 'body-parser';
+import { client, db, tasksCollection } from './database.mjs';
+// import bodyParser from 'body-parser';
 
 const app = express();
 const port = 4000;
 
 app.use(cors());
-app.use(bodyParser.json());
 
-let tasks = ['Clean The Kitchen', 'Take a Shower', 'Charge the Phone'];
-// let tasks = ['Clean The Kitchen', 'Take a Shower'];
+// bodyParser.json() for older Express versions
+// app.use(bodyParser.json());
 
-// get all tasks
-app.get('/tasks', (req, res) => {
+// express.json() for newer Express Versions
+app.use(express.json());
+
+app.get('/tasks', async (req, res) => {
+  const tasksArray = await tasksCollection.find({ }).toArray();
+  const tasks = tasksArray.map(item => item.task) 
   res.json(tasks);
 });
 
-// add new task
-app.post('/tasks', (req, res) => {
+app.post('/tasks', async (req, res) => {
   const task = req.body.inputVal;
-  tasks = [ task, ...tasks ];
-  res.json(tasks);
+  const insertTask = await tasksCollection.insertOne({ task })
+
+  const tasksArray = await tasksCollection.find({ }).toArray();
+  const tasks = tasksArray.map(item => item.task) 
+  res.status(201).json(tasks);
 });
 
-// delete a task
-app.delete('/tasks/:index', (req, res) => {
-  const index = req.params.index;
-  tasks = tasks.filter((_, i) => i.toString() !== index);
-  res.json(tasks);
+app.delete('/tasks/:task', async (req, res) => {
+  const { task } = req.params;
+
+  try {
+    const deleteTask = await tasksCollection.deleteOne({ task });
+
+    if (deleteTask.deletedCount === 0) {
+      return res.status(404).json({ error: 'Task not found'});
+    }
+
+    const tasksArray = await tasksCollection.find({ }).toArray();
+    const tasks = tasksArray.map(item => item.task) 
+    res.json(tasks);  
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 app.get('/', (req, res) => {
   res.send('Hello World!');
-})
-
-app.listen(port, () => {
-  console.log('Server is running on port: ', port);
 });
+
+app.listen(port, async () => {
+  try {
+    await client.connect();
+    console.log('Connected to MongoDB');
+  
+    console.log('Server is running on port: ', port);
+  
+  } catch (error) {
+    console.error('Failed to connect to MongoDB', error);
+    process.exit(1);
+  }
+});
+
